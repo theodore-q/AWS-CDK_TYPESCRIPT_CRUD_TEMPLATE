@@ -8,8 +8,6 @@ _AWS Services used_: AWS Lambda, AWS DynamoDB
 In this setup you can sign up, verify and login, via cognito.
 You can also create read update and delete Items that you have created.
 
-
-
 ## Requirements
 
 - AWS CLI already configured with Administrator permission

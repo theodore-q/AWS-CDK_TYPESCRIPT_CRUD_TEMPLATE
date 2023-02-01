@@ -1,14 +1,14 @@
-import { Construct } from 'constructs';
-import { Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
+import { Construct } from "constructs";
+import { Stack, StackProps, RemovalPolicy } from "aws-cdk-lib";
 
-import { AttributeType, Table } from 'aws-cdk-lib/aws-dynamodb';
-import {Runtime, FunctionUrlAuthType } from "aws-cdk-lib/aws-lambda";
-import {NodejsFunction} from "aws-cdk-lib/aws-lambda-nodejs"
-import * as path from 'path';
-import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as cognito from 'aws-cdk-lib/aws-cognito';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import { JsonSchemaType, RequestValidator } from 'aws-cdk-lib/aws-apigateway';
+import { AttributeType, Table } from "aws-cdk-lib/aws-dynamodb";
+import { Runtime, FunctionUrlAuthType } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import * as path from "path";
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
+import * as cognito from "aws-cdk-lib/aws-cognito";
+import * as iam from "aws-cdk-lib/aws-iam";
+import { JsonSchemaType, RequestValidator } from "aws-cdk-lib/aws-apigateway";
 
 export class CdkTypescriptStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -24,32 +24,37 @@ export class CdkTypescriptStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY, // only for development purposes
     });
 
-      // Define the Cognito User Pool
-      const userPool = new cognito.UserPool(this, 'MyUserPool', {
-      userPoolName: 'MyUserPool',
+    // Define the Cognito User Pool
+    const userPool = new cognito.UserPool(this, "MyUserPool", {
+      userPoolName: "MyUserPool",
       selfSignUpEnabled: true,
       autoVerify: { email: true },
     });
 
     //Define the Cognito User Pool Client
-    const userPoolClient = new cognito.UserPoolClient(this, 'MyUserPoolClient', {
-      userPool: userPool,
-      userPoolClientName: 'MyUserPoolClient',
-      generateSecret: false,      
-      authFlows: {
-        userPassword: true,
+    const userPoolClient = new cognito.UserPoolClient(
+      this,
+      "MyUserPoolClient",
+      {
+        userPool: userPool,
+        userPoolClientName: "MyUserPoolClient",
+        generateSecret: false,
+        authFlows: {
+          userPassword: true,
+        },
       }
+    );
+
+    const userManagmentRole = new iam.Role(this, "userManagmentRole", {
+      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
     });
 
-    const userManagmentRole = new iam.Role(this, 'userManagmentRole', {
-        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-    });
-    
-    userManagmentRole.addToPolicy(new iam.PolicyStatement({
-        actions: ['cognito-idp:SignUp','cognito-idp:AdminConfirmSignUp'],
+    userManagmentRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["cognito-idp:SignUp", "cognito-idp:AdminConfirmSignUp"],
         resources: [userPool.userPoolArn],
-    }));
-
+      })
+    );
 
     const createUser = new NodejsFunction(this, "CreateUser", {
       runtime: Runtime.NODEJS_14_X,
@@ -127,14 +132,17 @@ export class CdkTypescriptStack extends Stack {
     table.grantReadWriteData(deleteItem);
     table.grantReadWriteData(updateItem);
 
-
     const api = new apigateway.RestApi(this, "crudAPIDynamoDB", {
       restApiName: "CRUD Service for DynamoDB",
     });
 
-    const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
-      cognitoUserPools: [userPool],
-    });
+    const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(
+      this,
+      "CognitoAuthorizer",
+      {
+        cognitoUserPools: [userPool],
+      }
+    );
 
     const todoModel = new apigateway.Model(this, "model-validator", {
       restApi: api,
@@ -147,29 +155,34 @@ export class CdkTypescriptStack extends Stack {
         properties: {
           taskDetails: {
             type: JsonSchemaType.STRING,
-           },
-           taskCompleted: {
+          },
+          taskCompleted: {
             type: JsonSchemaType.BOOLEAN,
             default: false,
-           },
+          },
         },
       },
     });
 
-    const apiRoot = api.root.addResource(tableName,{
+    const apiRoot = api.root.addResource(tableName, {
       defaultMethodOptions: {
         authorizationType: apigateway.AuthorizationType.COGNITO,
         authorizer: cognitoAuthorizer,
-        requestValidator: new apigateway.RequestValidator(this, "RequestValidator", {
-          restApi: api,
-          requestValidatorName: "todo-model-validator",
-          validateRequestBody: true,
-          validateRequestParameters: false,
-        }),
+        requestValidator: new apigateway.RequestValidator(
+          this,
+          "RequestValidator",
+          {
+            restApi: api,
+            requestValidatorName: "todo-model-validator",
+            validateRequestBody: true,
+            validateRequestParameters: false,
+          }
+        ),
         requestModels: {
           "application/json": todoModel,
         },
-    }});
+      },
+    });
 
     apiRoot.addMethod("POST", new apigateway.LambdaIntegration(createItem));
 
@@ -178,15 +191,24 @@ export class CdkTypescriptStack extends Stack {
     const idResource = apiRoot.addResource("{id}");
     idResource.addMethod("GET", new apigateway.LambdaIntegration(readItems));
     idResource.addMethod("PUT", new apigateway.LambdaIntegration(updateItem));
-    idResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteItem));
+    idResource.addMethod(
+      "DELETE",
+      new apigateway.LambdaIntegration(deleteItem)
+    );
 
-   const userResource = api.root.addResource("signup");
-   userResource.addMethod("POST", new apigateway.LambdaIntegration(createUser));
+    const userResource = api.root.addResource("signup");
+    userResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(createUser)
+    );
 
     const loginResource = api.root.addResource("login");
     loginResource.addMethod("POST", new apigateway.LambdaIntegration(login));
 
     const verifyResource = api.root.addResource("verify");
-    verifyResource.addMethod("GET", new apigateway.LambdaIntegration(verifyUser));
+    verifyResource.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(verifyUser)
+    );
   }
 }

@@ -1,4 +1,4 @@
-import * as AWS from 'aws-sdk';
+import * as AWS from "aws-sdk";
 
 const db = new AWS.DynamoDB.DocumentClient();
 const TABLE_NAME = process.env.TABLE_NAME || "";
@@ -8,7 +8,10 @@ export const handler = async (event: any = {}): Promise<any> => {
   const requestedItemId = event.pathParameters.id;
   const userId = event.requestContext.authorizer.claims.sub;
   if (!requestedItemId) {
-    return { statusCode: 400, body: "Bad Request: missing the path parameter id" };
+    return {
+      statusCode: 400,
+      body: "Bad Request: missing the path parameter id",
+    };
   }
 
   const params = {
@@ -26,14 +29,14 @@ export const handler = async (event: any = {}): Promise<any> => {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'Task deleted successfully',
+          message: "Task deleted successfully",
         }),
       };
     } else {
       return {
         statusCode: 403,
         body: JSON.stringify({
-          error: 'You do not have permission to delete this task',
+          error: "You do not have permission to delete this task",
         }),
       };
     }
