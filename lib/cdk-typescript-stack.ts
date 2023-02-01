@@ -8,12 +8,13 @@ import * as path from 'path';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import { JsonSchemaType, RequestValidator } from 'aws-cdk-lib/aws-apigateway';
 
 export class CdkTypescriptStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const tableName = "todoTasks";
+    const tableName = "todo_tasks";
     const partitionKeyName = "taskId";
 
     //Dynamodb table definition
@@ -135,36 +136,49 @@ export class CdkTypescriptStack extends Stack {
       cognitoUserPools: [userPool],
     });
 
-    const apiRoot = api.root.addResource(tableName);
-
-    apiRoot.addMethod("POST", new apigateway.LambdaIntegration(createItem),
-    {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: cognitoAuthorizer
+    const todoModel = new apigateway.Model(this, "model-validator", {
+      restApi: api,
+      contentType: "application/json",
+      description: "To validate the request body",
+      modelName: "todoModel",
+      schema: {
+        type: JsonSchemaType.OBJECT,
+        required: ["taskDetails"],
+        properties: {
+          taskDetails: {
+            type: JsonSchemaType.STRING,
+           },
+           taskCompleted: {
+            type: JsonSchemaType.BOOLEAN,
+            default: false,
+           },
+        },
+      },
     });
 
-    apiRoot.addMethod("GET", new apigateway.LambdaIntegration(readItems),
-    {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: cognitoAuthorizer
-    });
+    const apiRoot = api.root.addResource(tableName,{
+      defaultMethodOptions: {
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: cognitoAuthorizer,
+        requestValidator: new apigateway.RequestValidator(this, "RequestValidator", {
+          restApi: api,
+          requestValidatorName: "todo-model-validator",
+          validateRequestBody: true,
+          validateRequestParameters: false,
+        }),
+        requestModels: {
+          "application/json": todoModel,
+        },
+    }});
+
+    apiRoot.addMethod("POST", new apigateway.LambdaIntegration(createItem));
+
+    apiRoot.addMethod("GET", new apigateway.LambdaIntegration(readItems));
 
     const idResource = apiRoot.addResource("{id}");
-    idResource.addMethod("GET", new apigateway.LambdaIntegration(readItems),
-    {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: cognitoAuthorizer
-    });
-    idResource.addMethod("PUT", new apigateway.LambdaIntegration(updateItem),
-    {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: cognitoAuthorizer
-    });
-    idResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteItem),
-    {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: cognitoAuthorizer
-    });
+    idResource.addMethod("GET", new apigateway.LambdaIntegration(readItems));
+    idResource.addMethod("PUT", new apigateway.LambdaIntegration(updateItem));
+    idResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteItem));
 
    const userResource = api.root.addResource("signup");
    userResource.addMethod("POST", new apigateway.LambdaIntegration(createUser));
