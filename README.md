@@ -89,6 +89,7 @@ Method:
 ### /todo_tasks/{taskId}
 - PUT: Update an existing task for the authenticated user
 - DELETE: Delete a task for the authenticated user
+- GET: Retrieve a single task for the authenticated user
 
 Request Body (POST and PUT only):
 - taskDetails (string): Description of the task
