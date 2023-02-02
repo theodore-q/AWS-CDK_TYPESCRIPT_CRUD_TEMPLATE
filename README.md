@@ -14,7 +14,7 @@ Given more time, I would have implemented the following features to improve the 
 - A comprehensive suite of tests to ensure the stability and reliability of the application
 - Detailed documentation, including an OpenAPI specification for generating the API automatically
 - A security audit to identify and mitigate any potential vulnerabilities.
-- A Better access control pattern, I'm sure there is a better pattern for resticting users to only there todo's with dynmodb
+- A Better access control pattern, *I'm sure there is a better pattern for resticting users to only there todo's with dynmodb*
 
 
 ## Requirements
